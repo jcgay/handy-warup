@@ -1,10 +1,8 @@
 package com.vidal.handyWarup
 
 import com.vidal.handyWarup.errors.UpdateUnzipException
-
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.function.Function
@@ -21,20 +19,22 @@ class UnzipToTempDirectory : Function<File, Path> {
 
         try {
             ZipFile(zip).use { zipFile ->
-                zipFile.stream().filter({ zE -> !zE.isDirectory() }).forEachOrdered({ zipEntry ->
-                    try {
-                        zipFile.getInputStream(zipEntry).use({ `is` ->
-                            val target = extractDir.resolve(zipEntry.getName())
-                            val file = target.toFile()
-                            makeFileTree(file.getParentFile())
-                            Files.copy(`is`, target)
-                        })
-                    } catch (e: IOException) {
-                        throw UpdateUnzipException(e)
+                zipFile.entries().toList()
+                    .filter { !it.isDirectory }
+                    .forEach {
+                        try {
+                            zipFile.getInputStream(it).use { entryStream ->
+                                val target = extractDir.resolve(it.name)
+                                val file = target.toFile()
+                                makeFileTree(file.parentFile)
+                                Files.copy(entryStream, target)
+                            }
+                        } catch(e: IOException) {
+                            throw UpdateUnzipException(e)
+                        }
                     }
-                })
             }
-        } catch (e: IOException) {
+        } catch(e: IOException) {
             throw UpdateUnzipException("could not find diff file", e)
         }
 

@@ -1,41 +1,27 @@
 package com.vidal.handyWarup
 
-import com.vidal.handyWarup.errors.CommandParsingException
-import com.vidal.handyWarup.errors.HandyWarupException
-import com.vidal.handyWarup.errors.NoUpdateDescriptorException
-import com.vidal.handyWarup.errors.TargetDirectoryPermissionException
-import com.vidal.handyWarup.errors.TemporaryCopyException
-
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.FileReader
-import java.io.IOException
+import com.vidal.handyWarup.errors.*
+import java.io.*
+import java.nio.file.Files.createTempDirectory
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import java.util.AbstractMap.SimpleEntry
-import java.util.Arrays
-import java.util.Date
-import java.util.HashMap
 import java.util.function.BiFunction
-import java.util.function.Function
-import java.util.function.Supplier
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
 
-import java.nio.file.Files.createTempDirectory
-
 class HandyWarup : BiFunction<File, File, File> {
 
-    private val commandFactory: MutableMap<Pattern, Function<Matcher, Command>>
+    private val commandFactory: MutableMap<Pattern, (Matcher) -> Command>
     private val deepCopy: FsDeepCopy
     private val deepRemove: FsDeepRemove
 
     init {
         deepCopy = FsDeepCopy()
         deepRemove = FsDeepRemove()
-        commandFactory = HashMap<Pattern, Function<Matcher, Command>>()
+        commandFactory = HashMap<Pattern, (Matcher) -> Command>()
         commandFactory.put(
                 Pattern.compile("(?:add|replace) --from=/?(.*) --to=/?(.*)"),
                 { matcher -> AddCommand(Paths.get(matcher.group(1)), Paths.get(matcher.group(2))) })
@@ -53,11 +39,10 @@ class HandyWarup : BiFunction<File, File, File> {
      */
     fun accepts(file: File): Boolean {
         try {
-            ZipFile(file).use { zipFile -> return zipFile.getEntry("batch.warup") != null }
-        } catch (e: IOException) {
+            return ZipFile(file).use { zipFile: ZipFile -> zipFile.getEntry("batch.warup") } != null
+        } catch(e: IOException) {
             return false
         }
-
     }
 
     /**
@@ -85,10 +70,15 @@ class HandyWarup : BiFunction<File, File, File> {
         val appliedDirectory = copyTarget(targetPath)
         val unzipped = UnzipToTempDirectory().apply(zippedDiff)
 
-        val batchFile = Arrays.asList(*unzipped.toFile().listFiles()).stream().filter({ file -> file.getName() == "batch.warup" }).findFirst().orElseThrow({ NoUpdateDescriptorException("could not find patch file") })
+        val batchFile = unzipped.toFile().listFiles()
+                .filter { it.name == "batch.warup" }
+                .firstOrNull() ?: throw NoUpdateDescriptorException("could not find patch file")
 
         try {
-            BufferedReader(FileReader(batchFile)).use { reader -> reader.lines().map(Function<String, Command> { this.parseCommandLine(it) }).forEach({ command -> command.accept(unzipped, appliedDirectory) }) }
+            BufferedReader(FileReader(batchFile)).use { reader -> reader.lines()
+                    .map { parseCommandLine(it) }
+                    .forEach { it.accept(unzipped, appliedDirectory) }
+            }
         } catch (e: FileNotFoundException) {
             throw NoUpdateDescriptorException(e)
         } catch (e: IOException) {
@@ -119,12 +109,14 @@ class HandyWarup : BiFunction<File, File, File> {
     }
 
     private fun parseCommandLine(line: String): Command {
-        return commandFactory.entries.stream().map({ entry ->
-            val matcher = entry.key.matcher(line)
-            SimpleEntry<Boolean, Supplier<Command>>(
-                    matcher.matches(), // matches is called here, so subsequent group() calls will work
-                    { entry.value.apply(matcher) })
-        }).filter(Predicate<SimpleEntry<Boolean, Supplier<Command>>> { it.getKey() }).map({ entry -> entry.value.get() }).findFirst().orElseThrow({ CommandParsingException("Line could not be parsed: " + line) })
+        return commandFactory
+                .map {
+                    val matcher = it.key.matcher(line)
+                    SimpleEntry(matcher.matches(), { it.value(matcher) })
+                }
+                .filter { it.key == true }
+                .map { it.value() }
+                .firstOrNull() ?: throw CommandParsingException("Line could not be parsed: " + line)
     }
 
     private fun move(appliedDirectory: Path, targetDirectory: Path): File {

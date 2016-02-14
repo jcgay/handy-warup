@@ -1,13 +1,8 @@
 package com.vidal.handyWarup
 
 import com.vidal.handyWarup.errors.TemporaryCopyException
-
 import java.io.IOException
-import java.nio.file.FileVisitResult
-import java.nio.file.FileVisitor
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.function.BiConsumer
 
@@ -42,7 +37,7 @@ class FsDeepCopy : BiConsumer<Path, Path> {
         }
 
         @Throws(IOException::class)
-        override fun postVisitDirectory(dir: Path, exc: IOException): FileVisitResult {
+        override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
             return FileVisitResult.CONTINUE
         }
 
