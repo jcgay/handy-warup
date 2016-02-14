@@ -1,8 +1,9 @@
 package com.vidal.handyWarup;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assume.assumeTrue;
+import org.assertj.core.api.Assertions;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,10 +12,10 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Locale;
-import org.assertj.core.api.Assertions;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assume.assumeTrue;
 
 public class EndToEndTest {
 
@@ -27,7 +28,7 @@ public class EndToEndTest {
       File unzippedOldWar = copyInTmp("/oldWar");
       File diff = Zip.zipAndGet("/diff", folder);
 
-      patch.apply(diff, unzippedOldWar);
+      patch.invoke(diff, unzippedOldWar);
 
       assertThatFileTreesAreEqual(unzippedOldWar, loadFileFromClasspath("/newWar"));
    }
@@ -46,7 +47,7 @@ public class EndToEndTest {
       File diff = new File("target", "handy-warup-diff.zip");
       File unzippedOldWar = unzip(oldWarFile);
 
-      patch.apply(diff, unzippedOldWar);
+      patch.invoke(diff, unzippedOldWar);
 
       assertThatFileTreesAreEqual(unzippedOldWar, unzip(newWarFile));
    }
@@ -57,7 +58,7 @@ public class EndToEndTest {
 
    private File copyInTmp(String name) throws Exception {
       File copyDirectory = folder.newFolder();
-      new FsDeepCopy().accept(loadFileFromClasspath(name).toPath(), copyDirectory.toPath());
+      new FsDeepCopy().invoke(loadFileFromClasspath(name).toPath(), copyDirectory.toPath());
       return copyDirectory;
    }
 
@@ -75,7 +76,7 @@ public class EndToEndTest {
    }
 
     private File unzip(File newWarFile) {
-      return new UnzipToTempDirectory().apply(newWarFile).toFile();
+      return new UnzipToTempDirectory().invoke(newWarFile).toFile();
    }
 
    private void assertThatFileTreesAreEqual(File actual, File expected) {

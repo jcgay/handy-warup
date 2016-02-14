@@ -7,12 +7,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import java.util.AbstractMap.SimpleEntry
-import java.util.function.BiFunction
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
 
-class HandyWarup : BiFunction<File, File, File> {
+class HandyWarup : (File, File) -> File {
 
     private val commandFactory: MutableMap<Pattern, (Matcher) -> Command>
     private val deepCopy: FsDeepCopy
@@ -31,6 +30,23 @@ class HandyWarup : BiFunction<File, File, File> {
     }
 
     /**
+     * Applies the specified update to the specified directory.
+
+     * While not mandatory, calling [.accepts] is strongly recommended
+     * in order to make sure `zippedDiff` is a valid update archive.
+
+     * @param zippedDiff update archive to extract and apply
+     * @param targetDirectory archive apply target
+     *
+     * @return [File] instance that points to the modified specified installation path
+     *
+     * @throws HandyWarupException if a problem occurs at any step
+     */
+    override fun invoke(zippedDiff: File, targetDirectory: File): File {
+        return applyPatch(zippedDiff, targetDirectory)
+    }
+
+    /**
      * Tells whether a file is a valid Handy Warup update package.
 
      * @param file file to test
@@ -45,30 +61,12 @@ class HandyWarup : BiFunction<File, File, File> {
         }
     }
 
-    /**
-     * Applies the specified update to the specified directory.
-
-     * While not mandatory, calling [.accepts] is strongly recommended
-     * in order to make sure `zippedDiff` is a valid update archive.
-
-     * @param zippedDiff update archive to extract and apply
-     * *
-     * @param targetDirectory archive apply target
-     * *
-     * @return [File] instance that points to the modified specified installation path
-     * *
-     * @throws HandyWarupException if a problem occurs at any step
-     */
-    override fun apply(zippedDiff: File, targetDirectory: File): File {
-        return applyPatch(zippedDiff, targetDirectory)
-    }
-
     private fun applyPatch(zippedDiff: File, targetDirectory: File): File {
         assertTarget(targetDirectory)
 
         val targetPath = targetDirectory.toPath()
         val appliedDirectory = copyTarget(targetPath)
-        val unzipped = UnzipToTempDirectory().apply(zippedDiff)
+        val unzipped = UnzipToTempDirectory()(zippedDiff)
 
         val batchFile = unzipped.toFile().listFiles()
                 .filter { it.name == "batch.warup" }
@@ -77,7 +75,7 @@ class HandyWarup : BiFunction<File, File, File> {
         try {
             BufferedReader(FileReader(batchFile)).use { reader -> reader.lines()
                     .map { parseCommandLine(it) }
-                    .forEach { it.accept(unzipped, appliedDirectory) }
+                    .forEach { it(unzipped, appliedDirectory) }
             }
         } catch (e: FileNotFoundException) {
             throw NoUpdateDescriptorException(e)
@@ -100,7 +98,7 @@ class HandyWarup : BiFunction<File, File, File> {
     private fun copyTarget(targetDirectory: Path): Path {
         try {
             val tempDirectory = createTempDirectory("handy-warup-" + Date().time)
-            deepCopy.accept(targetDirectory, tempDirectory)
+            deepCopy(targetDirectory, tempDirectory)
             return tempDirectory
         } catch (e: IOException) {
             throw TemporaryCopyException(e.message, e)
@@ -121,7 +119,7 @@ class HandyWarup : BiFunction<File, File, File> {
 
     private fun move(appliedDirectory: Path, targetDirectory: Path): File {
         deepRemove.accept(targetDirectory)
-        deepCopy.accept(appliedDirectory, targetDirectory)
+        deepCopy(appliedDirectory, targetDirectory)
         deepRemove.accept(appliedDirectory)
         return targetDirectory.toFile()
     }
@@ -133,7 +131,7 @@ class HandyWarup : BiFunction<File, File, File> {
                 throw IllegalArgumentException(
                         "Expecting diff and target paths as arguments")
             }
-            HandyWarup().apply(File(args[0]), File(args[1]))
+            HandyWarup()(File(args[0]), File(args[1]))
         }
     }
 }

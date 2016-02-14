@@ -4,17 +4,15 @@ import com.vidal.handyWarup.errors.TemporaryCopyException
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.function.BiConsumer
 
-class FsDeepCopy : BiConsumer<Path, Path> {
+class FsDeepCopy : (Path, Path) -> Unit {
 
-    override fun accept(source: Path, target: Path) {
+    override fun invoke(source: Path, target: Path) {
         try {
             Files.walkFileTree(source, DeepCopyVisitor(source, target))
         } catch (e: IOException) {
             throw TemporaryCopyException("Unable to deep copy $source to $target", e)
         }
-
     }
 
     private class DeepCopyVisitor(private val source: Path, private val target: Path) : FileVisitor<Path> {

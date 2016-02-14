@@ -32,7 +32,7 @@ public class FsDeepCopyTest {
       write(file, "Hello world!");
       Path target = folder.newFile("bar").toPath();
 
-      deepCopy.accept(file, target);
+      deepCopy.invoke(file, target);
 
       assertThat(target)
          .exists()
@@ -54,7 +54,7 @@ public class FsDeepCopyTest {
       );
 
       thrown.expectCause(isA(DirectoryNotEmptyException.class));
-      deepCopy.accept(directory, target);
+      deepCopy.invoke(directory, target);
    }
 
    private void write(Path path, String string) throws IOException {

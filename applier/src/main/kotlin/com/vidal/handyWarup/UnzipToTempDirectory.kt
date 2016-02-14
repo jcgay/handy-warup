@@ -5,12 +5,11 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.function.Function
 import java.util.zip.ZipFile
 
-class UnzipToTempDirectory : Function<File, Path> {
+class UnzipToTempDirectory : (File) -> Path {
 
-    override fun apply(file: File): Path {
+    override fun invoke(file: File): Path {
         return toTemp(file)
     }
 

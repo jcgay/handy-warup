@@ -30,7 +30,7 @@ public class HandyWarupTest {
       File diff = new File(getClass().getResource("/emptyDiff.zip").toURI());
       File target = folder.newFolder();
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).exists().isDirectory();
       assertThat(patched.listFiles()).isEmpty();
@@ -44,7 +44,7 @@ public class HandyWarupTest {
 
       thrown.expect(NoUpdateDescriptorException.class);
       thrown.expectMessage("could not find patch file");
-      handyWarup.apply(diff, target);
+      handyWarup.invoke(diff, target);
    }
 
    @Test
@@ -54,7 +54,7 @@ public class HandyWarupTest {
 
       thrown.expect(UpdateUnzipException.class);
       thrown.expectMessage("could not find diff file");
-      handyWarup.apply(diff, target);
+      handyWarup.invoke(diff, target);
    }
 
    @Test
@@ -65,7 +65,7 @@ public class HandyWarupTest {
 
       thrown.expect(TargetDirectoryPermissionException.class);
       thrown.expectMessage("could not find target to apply to");
-      handyWarup.apply(diff, target);
+      handyWarup.invoke(diff, target);
    }
 
 
@@ -78,7 +78,7 @@ public class HandyWarupTest {
 
       thrown.expect(TargetDirectoryPermissionException.class);
       thrown.expectMessage("target must be writable");
-      handyWarup.apply(diff, target);
+      handyWarup.invoke(diff, target);
    }
 
 
@@ -87,7 +87,7 @@ public class HandyWarupTest {
       File diff = zipAndGet("/fileAdditionDiff", folder);
       File target = folder.newFolder();
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.listFiles())
@@ -103,7 +103,7 @@ public class HandyWarupTest {
       File target = folder.newFolder();
       newFile(target, "hello.txt");
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.listFiles())
@@ -117,7 +117,7 @@ public class HandyWarupTest {
       File diff = zipAndGet("/directoryAdditionDiff", folder);
       File target = folder.newFolder();
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.toPath().resolve("new_directory/Hello.txt")).hasContent("hello world!");
@@ -129,7 +129,7 @@ public class HandyWarupTest {
       File target = folder.newFolder();
       newFile(target, "hello.txt");
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.listFiles())
@@ -143,7 +143,7 @@ public class HandyWarupTest {
       File diff = zipAndGet("/directoryReplacementDiff", folder);
       File target = folder.newFolder();
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.toPath().resolve("new_directory/Hello.txt")).hasContent("hello world!");
@@ -155,7 +155,7 @@ public class HandyWarupTest {
       File target = folder.newFolder();
       newFile(target, "hello.txt");
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.listFiles()).isEmpty();
@@ -172,7 +172,7 @@ public class HandyWarupTest {
       newDirectory(target, "old_dir/other/very/nested");
       newFile(target, "old_dir/other/very/nested/hello.txt");
 
-      File patched = handyWarup.apply(diff, target);
+      File patched = handyWarup.invoke(diff, target);
 
       assertThat(patched).isDirectory();
       assertThat(patched.listFiles()).isEmpty();
@@ -188,7 +188,7 @@ public class HandyWarupTest {
       thrown.expect(CommandParsingException.class);
       thrown.expectMessage("Line could not be parsed: i'm not a parseable command!");
 
-      handyWarup.apply(diff, target);
+      handyWarup.invoke(diff, target);
 
       assertThat(existingFile).hasContent("barbaz");
    }
